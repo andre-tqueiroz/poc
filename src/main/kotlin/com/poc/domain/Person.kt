@@ -33,7 +33,7 @@ data class Person(
 
     val createdAt: LocalDateTime? = LocalDateTime.now(),
 
-    @Enumerated(EnumType.STRING)
-    var decision: Decision = Decision.UNDEFINED
+    //@Enumerated(EnumType.STRING)
+    var decision: String = Decision.UNDEFINED.name
 
 )
