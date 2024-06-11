@@ -7,6 +7,10 @@ import org.springframework.boot.runApplication
 class PocApplication
 
 fun main(args: Array<String>) {
-    runApplication<PocApplication>(*args)
+    runApplication<PocApplication>() {
+        if (args.isNotEmpty() && args[0] == "populatedb") {
+            this.setAdditionalProfiles("populatedb")
+        }
+    }
 }
 
