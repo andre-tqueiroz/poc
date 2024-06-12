@@ -13,7 +13,7 @@ class CustomChunkListener : ChunkListener {
     }
 
     override fun afterChunk(chunkContext: ChunkContext) {
-        println("After chunk processing: " + chunkContext.stepContext.stepExecution.commitCount)
+        //println("After chunk processing: " + chunkContext.stepContext.stepExecution.commitCount)
     }
 
     override fun afterChunkError(chunkContext: ChunkContext) {

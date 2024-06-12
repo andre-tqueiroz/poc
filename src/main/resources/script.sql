@@ -1,19 +1,15 @@
+select * from raw_data;
+select count(*) from raw_data;
+
+--
+
 select * from person;
 select count(*) from person;
 
 --
 
-select * from person where has_been_processed = true;
-select count(*) from person where has_been_processed = true;
-
---
-
-select * from person where has_been_processed = false;
-select count(*) from person where has_been_processed = false;
-
---
-
 drop table person;
+drop table raw_data;
 drop table batch_step_execution_context;
 drop table batch_step_execution;
 drop table batch_job_execution_params;

@@ -8,8 +8,6 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.time.LocalDateTime
 import java.util.*
-import kotlin.math.round
-import kotlin.random.Random
 
 @Entity
 @Table(name = "person")
@@ -19,19 +17,17 @@ data class Person(
     val id: UUID = UUID.randomUUID(),
 
     @Column(unique = true)
-    val cpf: String = (10000000000 until 99999999999).random().toString(),
+    val cpf: String,
 
-    val name: String = "Random Name ${(1 until 99999999999).random()} ",
+    val name: String,
 
-    val age: Int = (1 until 99).random(),
+    val age: Int,
 
-    val score: Int = (0 until 10).random(),
+    val score: Int,
 
-    val income: Double = round(Random.nextDouble(1000.0, 30000.0)),
+    val income: Double,
 
-    var hasBeenProcessed: Boolean = false,
-
-    val createdAt: LocalDateTime? = LocalDateTime.now(),
+    val createdAt: LocalDateTime = LocalDateTime.now(),
 
     //@Enumerated(EnumType.STRING)
     var decision: String = Decision.UNDEFINED.name

@@ -2,6 +2,7 @@ package com.poc.batch
 
 import com.poc.domain.Decision
 import com.poc.domain.Person
+import com.poc.domain.RawData
 import jakarta.persistence.EntityManagerFactory
 import org.springframework.batch.core.Job
 import org.springframework.batch.core.Step
@@ -23,8 +24,10 @@ import javax.sql.DataSource
 @Profile("!populatedb")
 @Configuration
 class BatchConfig(
-    private val entityManagerFactory: EntityManagerFactory,
+    private val transactionManager: PlatformTransactionManager,
     private val dataSource: DataSource,
+    private val jobRepository: JobRepository,
+    private val entityManagerFactory: EntityManagerFactory,
 ) {
 
     @Bean
@@ -36,15 +39,14 @@ class BatchConfig(
 
     @Bean
     fun step(
-        reader: ItemReader<Person>,
-        writer: ItemWriter<Person>,
-        transactionManager: PlatformTransactionManager,
-        jobRepository: JobRepository
+        reader: ItemReader<RawData>,
+        processor: ItemProcessor<RawData, Person>,
+        writer: ItemWriter<Person>
     ): Step {
         return StepBuilder("step", jobRepository)
-            .chunk<Person, Person>(100, transactionManager)
+            .chunk<RawData, Person>(100, transactionManager)
             .reader(reader)
-            .processor(processor())
+            .processor(processor)
             .writer(writer)
             .listener(CustomChunkListener())
             .listener(CustomItemReadListener())
@@ -52,20 +54,22 @@ class BatchConfig(
     }
 
     @Bean
-    fun itemReader(): JpaPagingItemReader<Person> {
-        val query = "select p from Person p"
+    fun reader(): JpaPagingItemReader<RawData> {
+        val query = "select rd from RawData rd"
 
-        return JpaPagingItemReaderBuilder<Person>()
+        return JpaPagingItemReaderBuilder<RawData>()
             .name("reader")
             .entityManagerFactory(entityManagerFactory)
             .queryString(query)
-            .pageSize(1000)
             .build()
     }
 
     @Bean
     fun writer(): ItemWriter<Person> {
-        val query = "UPDATE Person SET decision = :decision, has_been_processed = :hasBeenProcessed WHERE id = :id"
+        val query = """
+                INSERT INTO Person (id, cpf, name, age, score, income, created_at, decision)
+                VALUES (:id, :cpf, :name, :age, :score, :income, :createdAt, :decision)
+            """
 
         return JdbcBatchItemWriterBuilder<Person>()
             .dataSource(dataSource)
@@ -74,14 +78,21 @@ class BatchConfig(
             .build()
     }
 
-    fun processor(): ItemProcessor<Person, Person> {
-        return ItemProcessor<Person, Person> { person ->
+    @Bean
+    fun processor(): ItemProcessor<RawData, Person> {
+        return ItemProcessor<RawData, Person> { raw ->
+            val person = Person(
+                cpf = raw.cpf,
+                name = raw.name,
+                age = raw.age,
+                score = raw.score,
+                income = raw.income
+            )
             if (person.age >= 18 && person.score >= 6 && person.income >= 5000.0) {
                 person.decision = Decision.APPROVED.name
             } else {
                 person.decision = Decision.REJECTED.name
             }
-            person.hasBeenProcessed = true
             person
         }
     }
