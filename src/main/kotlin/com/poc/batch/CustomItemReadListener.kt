@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component
 class CustomItemReadListener<T : Any> : ItemReadListener<T> {
 
     override fun afterRead(item: T) {
-        //println("After reading item: $item")
+        println("After reading item: $item")
     }
 
 }

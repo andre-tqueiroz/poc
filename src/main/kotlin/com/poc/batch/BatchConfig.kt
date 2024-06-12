@@ -7,13 +7,16 @@ import jakarta.persistence.EntityManagerFactory
 import org.springframework.batch.core.Job
 import org.springframework.batch.core.Step
 import org.springframework.batch.core.job.builder.JobBuilder
+import org.springframework.batch.core.launch.support.RunIdIncrementer
 import org.springframework.batch.core.repository.JobRepository
 import org.springframework.batch.core.step.builder.StepBuilder
 import org.springframework.batch.item.ItemProcessor
 import org.springframework.batch.item.ItemReader
 import org.springframework.batch.item.ItemWriter
+import org.springframework.batch.item.database.JdbcCursorItemReader
 import org.springframework.batch.item.database.JpaPagingItemReader
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder
+import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder
 import org.springframework.batch.item.database.builder.JpaPagingItemReaderBuilder
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -27,13 +30,14 @@ class BatchConfig(
     private val transactionManager: PlatformTransactionManager,
     private val dataSource: DataSource,
     private val jobRepository: JobRepository,
-    private val entityManagerFactory: EntityManagerFactory,
+    private val entityManagerFactory: EntityManagerFactory
 ) {
 
     @Bean
     fun job(jobRepository: JobRepository, step: Step): Job {
         return JobBuilder("job", jobRepository)
             .start(step)
+            .incrementer(RunIdIncrementer())
             .build()
     }
 
@@ -44,23 +48,21 @@ class BatchConfig(
         writer: ItemWriter<Person>
     ): Step {
         return StepBuilder("step", jobRepository)
-            .chunk<RawData, Person>(100, transactionManager)
+            .chunk<RawData, Person>(300_000, transactionManager)
             .reader(reader)
             .processor(processor)
             .writer(writer)
             .listener(CustomChunkListener())
-            .listener(CustomItemReadListener())
             .build()
     }
 
     @Bean
-    fun reader(): JpaPagingItemReader<RawData> {
-        val query = "select rd from RawData rd"
-
-        return JpaPagingItemReaderBuilder<RawData>()
+    fun reader(): JdbcCursorItemReader<RawData> {
+        return JdbcCursorItemReaderBuilder<RawData>()
+            .dataSource(dataSource)
             .name("reader")
-            .entityManagerFactory(entityManagerFactory)
-            .queryString(query)
+            .sql("select rd.* from raw_data rd left join person p on rd.cpf = p.cpf where p.id is null")
+            .rowMapper(RawDataRowMapper())
             .build()
     }
 
