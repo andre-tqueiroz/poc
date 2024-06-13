@@ -1,9 +1,6 @@
 package com.poc.domain
 
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.Id
-import jakarta.persistence.Table
+import jakarta.persistence.*
 import java.util.*
 import kotlin.math.round
 import kotlin.random.Random
@@ -13,7 +10,8 @@ import kotlin.random.Random
 data class RawData(
 
     @Id
-    val id: UUID = UUID.randomUUID(),
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    val id: Long? = null,
 
     @Column(unique = true)
     val cpf: String = (10000000000 until 99999999999).random().toString(),

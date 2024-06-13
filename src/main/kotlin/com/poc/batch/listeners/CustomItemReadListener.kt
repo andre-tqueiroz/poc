@@ -1,4 +1,4 @@
-package com.poc.batch
+package com.poc.batch.listeners
 
 import org.springframework.batch.core.ItemReadListener
 import org.springframework.stereotype.Component

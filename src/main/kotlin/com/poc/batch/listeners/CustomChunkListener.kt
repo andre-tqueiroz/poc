@@ -1,4 +1,4 @@
-package com.poc.batch
+package com.poc.batch.listeners
 
 import org.springframework.batch.core.ChunkListener
 import org.springframework.batch.core.scope.context.ChunkContext

@@ -1,26 +1,32 @@
 package com.poc.batch
 
+import com.poc.batch.listeners.CustomChunkListener
 import com.poc.domain.Decision
 import com.poc.domain.Person
 import com.poc.domain.RawData
-import jakarta.persistence.EntityManagerFactory
 import org.springframework.batch.core.Job
 import org.springframework.batch.core.Step
+import org.springframework.batch.core.configuration.annotation.StepScope
 import org.springframework.batch.core.job.builder.JobBuilder
 import org.springframework.batch.core.launch.support.RunIdIncrementer
+import org.springframework.batch.core.partition.support.Partitioner
 import org.springframework.batch.core.repository.JobRepository
 import org.springframework.batch.core.step.builder.StepBuilder
 import org.springframework.batch.item.ItemProcessor
 import org.springframework.batch.item.ItemReader
 import org.springframework.batch.item.ItemWriter
-import org.springframework.batch.item.database.JdbcCursorItemReader
-import org.springframework.batch.item.database.JpaPagingItemReader
+import org.springframework.batch.item.database.JdbcPagingItemReader
+import org.springframework.batch.item.database.PagingQueryProvider
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder
-import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder
-import org.springframework.batch.item.database.builder.JpaPagingItemReaderBuilder
+import org.springframework.batch.item.database.builder.JdbcPagingItemReaderBuilder
+import org.springframework.batch.item.database.support.SqlPagingQueryProviderFactoryBean
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
+import org.springframework.core.task.TaskExecutor
+import org.springframework.jdbc.core.BeanPropertyRowMapper
 import org.springframework.transaction.PlatformTransactionManager
 import javax.sql.DataSource
 
@@ -28,74 +34,47 @@ import javax.sql.DataSource
 @Configuration
 class BatchConfig(
     private val transactionManager: PlatformTransactionManager,
-    private val dataSource: DataSource,
-    private val jobRepository: JobRepository,
-    private val entityManagerFactory: EntityManagerFactory
+    private val jobRepository: JobRepository
 ) {
 
     @Bean
-    fun job(jobRepository: JobRepository, step: Step): Job {
+    fun job(
+        jobRepository: JobRepository,
+        @Qualifier("rawDataStepManager") stepManager: Step
+    ): Job {
         return JobBuilder("job", jobRepository)
-            .start(step)
+            .start(stepManager)
             .incrementer(RunIdIncrementer())
             .build()
     }
 
     @Bean
-    fun step(
+    fun rawDataStepManager(
+        reader: ItemReader<RawData>,
+        processor: ItemProcessor<RawData, Person>,
+        writer: ItemWriter<Person>,
+        @Qualifier("rawDataPartitioner") partitioner: Partitioner,
+        taskExecutor: TaskExecutor
+    ): Step {
+        return StepBuilder("rawDataStepManager", jobRepository)
+            .partitioner("rawDataStepManager", partitioner)
+            .taskExecutor(taskExecutor)
+            .gridSize(10)
+            .step(rawDataStep(reader, processor, writer))
+            .build()
+    }
+
+    private fun rawDataStep(
         reader: ItemReader<RawData>,
         processor: ItemProcessor<RawData, Person>,
         writer: ItemWriter<Person>
     ): Step {
-        return StepBuilder("step", jobRepository)
-            .chunk<RawData, Person>(300_000, transactionManager)
+        return StepBuilder("workerStep", jobRepository)
+            .chunk<RawData, Person>(10000, transactionManager)
             .reader(reader)
             .processor(processor)
             .writer(writer)
             .listener(CustomChunkListener())
             .build()
-    }
-
-    @Bean
-    fun reader(): JdbcCursorItemReader<RawData> {
-        return JdbcCursorItemReaderBuilder<RawData>()
-            .dataSource(dataSource)
-            .name("reader")
-            .sql("select rd.* from raw_data rd left join person p on rd.cpf = p.cpf where p.id is null")
-            .rowMapper(RawDataRowMapper())
-            .build()
-    }
-
-    @Bean
-    fun writer(): ItemWriter<Person> {
-        val query = """
-                INSERT INTO Person (id, cpf, name, age, score, income, created_at, decision)
-                VALUES (:id, :cpf, :name, :age, :score, :income, :createdAt, :decision)
-            """
-
-        return JdbcBatchItemWriterBuilder<Person>()
-            .dataSource(dataSource)
-            .sql(query)
-            .beanMapped()
-            .build()
-    }
-
-    @Bean
-    fun processor(): ItemProcessor<RawData, Person> {
-        return ItemProcessor<RawData, Person> { raw ->
-            val person = Person(
-                cpf = raw.cpf,
-                name = raw.name,
-                age = raw.age,
-                score = raw.score,
-                income = raw.income
-            )
-            if (person.age >= 18 && person.score >= 6 && person.income >= 5000.0) {
-                person.decision = Decision.APPROVED.name
-            } else {
-                person.decision = Decision.REJECTED.name
-            }
-            person
-        }
     }
 }

@@ -15,7 +15,7 @@ class PopulateDatabase(
     @PostConstruct
     fun populateDatabase() {
         println("populating database...")
-        for (i in 1..16) {
+        for (i in 1..12) {
             try {
                 rawDataRepository.save(RawData())
             } catch (ex: RuntimeException) {

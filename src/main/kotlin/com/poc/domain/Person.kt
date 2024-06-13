@@ -1,11 +1,6 @@
 package com.poc.domain
 
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
-import jakarta.persistence.Id
-import jakarta.persistence.Table
+import jakarta.persistence.*
 import java.time.LocalDateTime
 import java.util.*
 
@@ -14,7 +9,7 @@ import java.util.*
 data class Person(
 
     @Id
-    val id: UUID = UUID.randomUUID(),
+    val id: Long?,
 
     @Column(unique = true)
     val cpf: String,

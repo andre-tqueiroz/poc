@@ -16,9 +16,9 @@ class RawDataRowMapper : RowMapper<RawData> {
         private const val INCOME_COLUMN = "income"
     }
 
-    override fun mapRow(rs: ResultSet, rowNum: Int): RawData? {
+    override fun mapRow(rs: ResultSet, rowNum: Int): RawData {
         return RawData(
-            id = rs.getObject(ID_COLUMN, UUID::class.java),
+            id = rs.getLong(ID_COLUMN),
             cpf = rs.getString(CPF_COLUMN),
             name = rs.getString(NAME_COLUMN),
             age = rs.getInt(AGE_COLUMN),
