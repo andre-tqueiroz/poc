@@ -11,13 +11,25 @@ import java.util.concurrent.ThreadPoolExecutor
 class TaskExecutorConfig {
 
     @Bean
-    fun taskExecutor(): TaskExecutor {
+    fun taskExecutorWorker(): TaskExecutor {
         val executor = ThreadPoolTaskExecutor()
         executor.corePoolSize = 10
         executor.queueCapacity = 10
         executor.maxPoolSize = 10
         executor.setRejectedExecutionHandler(ThreadPoolExecutor.CallerRunsPolicy())
         executor.setThreadNamePrefix("PartitionLocal-")
+
+        return executor
+    }
+
+    @Bean
+    fun taskExecutorAsync(): TaskExecutor {
+        val executor = ThreadPoolTaskExecutor()
+        executor.corePoolSize = 100
+        executor.queueCapacity = 100
+        executor.maxPoolSize = 100
+        executor.setRejectedExecutionHandler(ThreadPoolExecutor.CallerRunsPolicy())
+        executor.setThreadNamePrefix("Async-")
 
         return executor
     }
